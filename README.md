@@ -35,7 +35,7 @@ To successfully run this script, ensure that the following dependencies are inst
 3. Run the setup script:
 
    ```bash
-   ./setup-script.sh
+   ./setup.sh
    ```
 
 ## Tekton Pipeline Overview

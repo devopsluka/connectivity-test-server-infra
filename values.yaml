@@ -1,4 +1,4 @@
-namespace: test-sidtha2
+namespace: connectivity-test
 replicaCount: 3
 
 git:
@@ -9,7 +9,7 @@ serviceAccount:
   name: tekton-triggers-sa
 
 image:
-  repository: devopsluka/connectivity-test-server
+  repository: docker.io/devopsluka/connectivity-test-server
   tag: 1.0.0
 
 service:

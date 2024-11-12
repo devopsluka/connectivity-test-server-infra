@@ -1,4 +1,3 @@
-{{- if not (lookup "rbac.authorization.k8s.io/v1" "Role" .Values.namespace "tekton-triggers-role") }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -14,4 +13,11 @@ rules:
       - interceptors
       - eventlisteners/status
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
-{{- end }}
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: [""]
+    resources:
+      - services
+    verbs: ["get", "list"]

@@ -45,8 +45,6 @@ spec:
           workspace: source
         - name: dockerconfig
           workspace: docker-auth
-        - name: regcreds
-          workspace: regcreds
    # - name: trivy-scan
     #  params:
      #   - name: image
@@ -101,4 +99,3 @@ spec:
   workspaces:
     - name: source
     - name: docker-auth
-    - name: regcreds

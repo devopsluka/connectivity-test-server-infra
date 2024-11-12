@@ -1,0 +1,26 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: test-service
+  namespace: {{ .Values.namespace }}
+spec:
+  params:
+    - description: The URL of the service to ping.
+      name: service-url
+      type: string
+  steps:
+    - computeResources: {}
+      image: 'alpine/curl:latest'
+      name: ping-service
+      script: |
+        #!/bin/sh
+        set -e
+        echo "Pinging service at URL '$(params.service-url)'."
+        # Ping the /ping endpoint
+        STATUS_CODE=$(curl --write-out "%{http_code}" --silent --output /dev/null "http://$(params.service-url):8080/ping")
+        if [ "$STATUS_CODE" -eq 200 ]; then
+          echo "Successfully pinged service with status code 200!"
+        else
+          echo "Service ping failed with status code $STATUS_CODE."
+          exit 1
+        fi

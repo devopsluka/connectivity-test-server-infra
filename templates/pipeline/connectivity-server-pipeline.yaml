@@ -1,0 +1,104 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: {{ .Release.Name }}-pipeline
+  namespace: {{ .Values.namespace }}
+spec:
+  tasks:
+    - name: git-clone
+      params:
+        - name: url
+          value: {{ .Values.git.gitUrl }}
+        - name: revision
+          value: {{ .Values.git.gitBranch }}
+      taskRef:
+        name: git-clone
+        kind: Task
+      workspaces:
+        - name: output
+          workspace: source
+    - name: git-version
+      params:
+        - name: git-branch
+          value: {{ .Values.git.gitBranch }}
+      runAfter:
+        - git-clone
+      taskRef:
+        kind: Task
+        name: determine-version
+      workspaces:
+        - name: source
+          workspace: source
+    - name: build-and-push
+      params:
+        - name: IMAGE
+          value: '{{ .Values.image.repository }}:$(tasks.git-version.results.new-version)'
+        - name: SKIP_PUSH
+          value: 'false'
+      runAfter:
+        - git-version
+      taskRef:
+        kind: Task
+        name: buildah-build
+      workspaces:
+        - name: source
+          workspace: source
+        - name: dockerconfig
+          workspace: docker-auth
+        - name: regcreds
+          workspace: regcreds
+   # - name: trivy-scan
+    #  params:
+     #   - name: image
+      #    value: {{ .Values.image.repository }}:$(tasks.git-version.results.new-version)
+    #  runAfter:
+     #   - buildah-build
+     # taskRef:
+      #  kind: Task
+      #  name: trivy-scan
+      #workspaces:
+       # - name: source
+        #  workspace: source
+    - name: test-deployment
+      params:
+        - name: image
+          value: {{ .Values.image.repository }}:$(tasks.git-version.results.new-version)
+        - name: deployment-name
+          value: test-{{ .Release.Name }}
+        - name: namespace
+          value: {{ .Values.namespace }}
+        - name: service-name
+          value: test-{{ .Release.Name }}
+      runAfter:
+        - build-and-push
+      taskRef:
+        kind: Task
+        name: test-deployment
+    - name: test-service
+      params:
+        - name: service-url
+          value: $(tasks.test-deployment.results.service-url)
+      runAfter:
+        - test-deployment
+      taskRef:
+        kind: Task
+        name: test-service
+    - name: upgrade-deployment
+      params:
+        - name: image
+          value: {{ .Values.image.repository }}:$(tasks.git-version.results.new-version)
+        - name: deployment-name
+          value: {{ .Release.Name }}
+        - name: namespace
+          value: {{ .Values.namespace }}
+        - name: service-name
+          value: {{ .Release.Name }}
+      runAfter:
+        - test-service
+      taskRef:
+        kind: Task
+        name: test-deployment
+  workspaces:
+    - name: source
+    - name: docker-auth
+    - name: regcreds

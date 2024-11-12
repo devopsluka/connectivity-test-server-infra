@@ -1,0 +1,24 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: trivy-scan
+  namespace: {{ .Values.namespace }}
+spec:
+  params:
+    - name: image
+      type: string
+      description: The container image to scan.
+    - name: trivy-version
+      type: string
+      description: The version of Trivy to use (default is 'latest').
+      default: "latest"
+  steps:
+    - image: 'aquasec/trivy:$(params.trivy-version)'
+      name: trivy-scan
+      script: |
+        #!/bin/sh
+        set -e
+        echo "Scanning image: $(params.image) for vulnerabilities"
+        trivy image --format json $(params.image)
+  workspaces:
+    - name: source

@@ -1,0 +1,26 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: {{ .Release.Name }}-event-listener
+  namespace: {{ .Values.namespace }}
+spec:
+  serviceAccountName: {{ .Values.serviceAccount.name }}
+  resources:
+    kubernetesResource:
+      serviceType: NodePort
+  triggers:
+    - name: {{ .Release.Name }}-trigger
+      interceptors:
+        - ref:
+            name: github
+            kind: ClusterInterceptor
+            apiVersion: triggers.tekton.dev
+          params:
+            - name: secretRef
+              value:
+                secretName: webhook-secret
+                secretKey: secret
+      bindings:
+        - ref: {{ .Release.Name }}-trigger-binding
+      template:
+        ref: trigger-template-{{ .Release.Name }}-pipeline

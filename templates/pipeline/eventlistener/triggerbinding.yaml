@@ -1,0 +1,11 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: {{ .Release.Name }}-trigger-binding
+  namespace: {{ .Values.namespace }}
+spec:
+  params:
+    - name: git-revision
+      value: "$(body.head_commit.id)"
+    - name: git-repository-url
+      value: "$(body.repository.clone_url)"

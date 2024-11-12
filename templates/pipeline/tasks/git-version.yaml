@@ -1,0 +1,52 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: determine-version
+  namespace: {{ $.Values.namespace }}
+spec:
+  params:
+    - description: The name of the current Git branch.
+      name: git-branch
+      type: string
+  results:
+    - description: The determined semantic version based on branch and git tags.
+      name: new-version
+      type: string
+  steps:
+    - image: alpine/git
+      name: determine-version-step
+      script: |
+        set -x
+
+        if [ -f $(workspaces.git-secret.path)/id_ed25519 ]; then
+            mkdir -p ~/.ssh
+            cp $(workspaces.git-secret.path)/id_ed25519 ~/.ssh/id_ed25519
+            chmod 600 ~/.ssh/id_ed25519
+
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
+
+            git config --global core.sshCommand "ssh -i ~/.ssh/id_ed25519 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+        fi
+
+        git config --global --add safe.directory /workspace/source
+        git fetch --tags
+        LATEST_TAG=$(git describe --tags $(git rev-list --tags --max-count=1))
+        COMMIT_COUNT=$(git rev-list ${LATEST_TAG}..HEAD --count)
+        BRANCH_NAME="$(params.git-branch)"
+        TIMESTAMP=$(date +%s)
+
+        # Determine new version based on branch
+        if [ "$BRANCH_NAME" == "main" ]; then
+            NEW_VERSION="${LATEST_TAG}-dev${TIMESTAMP}"
+        elif [ "$BRANCH_NAME" == "stage" ]; then
+            NEW_VERSION="${LATEST_TAG}-rc${COMMIT_COUNT}"
+        else
+            NEW_VERSION="${LATEST_TAG}-dev${TIMESTAMP}"
+        fi
+
+        echo -n $NEW_VERSION > $(results.new-version.path)
+      workingDir: $(workspaces.source.path)
+  workspaces:
+    - name: source
+    - name: git-secret
+      optional: true

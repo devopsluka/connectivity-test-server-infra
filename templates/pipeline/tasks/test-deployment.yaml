@@ -1,0 +1,45 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: test-deployment
+  namespace: {{ .Values.namespace }}
+spec:
+  params:
+    - name: image
+      type: string
+      description: The container image to use for the deployment.
+    - name: deployment-name
+      type: string
+      description: The name of the Kubernetes deployment to update.
+    - name: namespace
+      type: string
+      default: default
+      description: The Kubernetes namespace where the deployment exists.
+    - name: service-name
+      type: string
+      description: The name of the service associated with the deployment.
+  results:
+    - name: service-url
+      description: The URL of the service to ping.
+  steps:
+    - name: update-deployment
+      image: 'bitnami/kubectl:latest'
+      script: |
+        #!/bin/bash
+        set -e
+        echo "Updating deployment '$(params.deployment-name)' to use image '$(params.image)' in namespace '$(params.namespace)'."
+        kubectl set image deployment/$(params.deployment-name) *=$(params.image) -n $(params.namespace)
+    - name: wait-for-deployment
+      image: 'bitnami/kubectl:latest'
+      script: |
+        #!/bin/bash
+        set -e
+        echo "Waiting for deployment '$(params.deployment-name)' to be ready in namespace '$(params.namespace)'."
+        kubectl rollout status deployment/$(params.deployment-name) -n $(params.namespace)
+        # Get the service URL and save it to the result
+        SERVICE_URL=$(kubectl get svc $(params.service-name) -n $(params.namespace) -o jsonpath='{.spec.clusterIP}')
+        if [ -z "$SERVICE_URL" ]; then
+          echo "Service URL not found!"
+          exit 1
+        fi
+        echo -n "$SERVICE_URL" > $(results.service-url.path)

@@ -1,0 +1,26 @@
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  name: {{ .Release.Name }}-pipelinerun
+  namespace: {{ .Values.namespace }}
+spec:
+  serviceAccountName: {{ .Values.serviceAccount.name }}
+  pipelineRef:
+    name: {{ .Release.Name }}-pipeline
+  params:
+    - name: url
+      value: {{ .Values.git.gitUrl }}
+    - name: revision
+      value: {{ .Values.git.gitBranch }}
+    - name: IMAGE
+      value: {{ .Values.image.repository }}
+  workspaces:
+    - name: source
+      persistentVolumeClaim:
+        claimName: source-pvc
+    - name: docker-auth
+      secret:
+        secretName: docker-auth
+    - name: regcreds
+      secret:
+        secretName: reg-creds
